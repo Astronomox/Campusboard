@@ -27,3 +27,4 @@ export default function Icon() {
     { ...size }
   );
 }
+"// v1.0"  
