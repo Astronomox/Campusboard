@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_LIST, CATEGORY_META } from "@/lib/campuses";
+import { censorNames } from "@/lib/censor";
 import { anonTag } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
 import type { Campus, Category, Post, ReactionEmoji } from "@/lib/types";
@@ -181,7 +182,7 @@ export function BoardClient({
         const local: Post = {
           id: `local-${Date.now()}`,
           campus_slug: campus.slug,
-          body,
+          body: censorNames(body),
           anon_tag: anonTag(),
           category,
           status: "published",
@@ -291,7 +292,26 @@ export function BoardClient({
       )}
 
       {/* Feed */}
-      {isFeedTab && (
+      {isFeedTab && visiblePosts.length === 0 && (
+        <div className="feed-empty">
+          <div className="feed-empty-inner">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <h3 className="feed-empty-h">No posts yet</h3>
+            <p className="feed-empty-p">Be the first to post something on the board.</p>
+            <button
+              type="button"
+              className="post-btn press"
+              onClick={() => { setPostError(null); setComposeOpen(true); }}
+            >
+              Post something →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isFeedTab && visiblePosts.length > 0 && (
         <>
           <div className="rail">
             {visiblePosts.map((p, i) => (
@@ -637,3 +657,4 @@ function GoogleMark() {
     </svg>
   );
 }
+"// v1.0"  
