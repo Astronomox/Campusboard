@@ -67,3 +67,4 @@ export async function finalizeModeration(postId: string, text: string): Promise<
   const admin = createAdminClient();
   await admin.from("posts").update({ status }).eq("id", postId);
 }
+"// v1.0"  
