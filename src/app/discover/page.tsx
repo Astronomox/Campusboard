@@ -41,3 +41,4 @@ export default async function DiscoverPage() {
     </>
   );
 }
+"// v1.0"  
