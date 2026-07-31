@@ -27,18 +27,21 @@ export async function POST(request: Request) {
 
   const parsed = createPostSchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
   const { campus, category } = parsed.data;
   const body = censorNames(parsed.data.body);
 
+  // Get authenticated user via server client (reads cookies)
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
+    console.error("[posts] auth error:", authError);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // All DB writes use admin client to bypass RLS — auth is already verified above
   const admin = createAdminClient();
 
   // Ban check
@@ -67,12 +70,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You're posting too fast. Try again shortly." }, { status: 429 });
   }
 
-  // Pre-filter (cheap, no model)
+  // Pre-filter
   if ((await preFilter(body)) === "reject") {
     return NextResponse.json({ rejected: true, reason: "Blocked by the content filter." }, { status: 422 });
   }
 
-  // Resolve anon tag (custom or HMAC)
+  // Resolve anon tag
   const { data: memberRow } = await admin
     .from("members")
     .select("custom_tag")
@@ -80,8 +83,8 @@ export async function POST(request: Request) {
     .maybeSingle();
   const customTag = memberRow?.custom_tag ?? null;
 
-  // Insert as pending — RLS only allows pending inserts
-  const { data, error: insertError } = await supabase
+  // Insert using admin client — bypasses RLS, auth already verified above
+  const { data, error: insertError } = await admin
     .from("posts")
     .insert({
       campus_slug: campus,
@@ -99,10 +102,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Insert failed", detail: insertError?.message }, { status: 500 });
   }
 
-  // Async: classify post, then flip status; also check invite credit grant
+  // Async: classify and flip status; grant invite credit if milestone hit
   after(() => finalizeModeration(data.id, body));
   after(async () => {
-    // Re-query post_count since insert doesn't return it
     const { data: m } = await admin
       .from("members")
       .select("post_count")
@@ -124,4 +126,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ post });
 }
-"// v1.0"  
