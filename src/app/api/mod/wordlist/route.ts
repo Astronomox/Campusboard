@@ -40,3 +40,4 @@ export async function DELETE(request: Request) {
   await admin.from("wordlist").delete().eq("id", id);
   return NextResponse.json({ ok: true });
 }
+"// v1.0"  
