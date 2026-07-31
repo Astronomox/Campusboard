@@ -38,3 +38,4 @@ export default async function TagsPage() {
     </>
   );
 }
+"// v1.0"  
