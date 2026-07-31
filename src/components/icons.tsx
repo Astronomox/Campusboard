@@ -188,3 +188,4 @@ export function BookmarkIcon(props: IconProps) {
     </svg>
   );
 }
+"// v1.0"  
