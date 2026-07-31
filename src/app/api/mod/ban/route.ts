@@ -56,3 +56,4 @@ export async function DELETE(request: Request) {
   await admin.from("bans").delete().eq("user_id", user_id);
   return NextResponse.json({ ok: true });
 }
+"// v1.0"  
