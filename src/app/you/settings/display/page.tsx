@@ -97,3 +97,4 @@ export default function DisplaySettingsPage() {
     </>
   );
 }
+"// v1.0"  
