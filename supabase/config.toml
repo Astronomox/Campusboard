@@ -1,0 +1,4 @@
+project_id = "campusboard"
+
+[functions.moderate-post]
+verify_jwt = true
