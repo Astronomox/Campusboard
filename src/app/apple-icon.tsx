@@ -27,3 +27,4 @@ export default function AppleIcon() {
     { ...size }
   );
 }
+"// v1.0"  
