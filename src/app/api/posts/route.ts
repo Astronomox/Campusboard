@@ -1,5 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { resolveTag } from "@/lib/anon";
+import { censorNames } from "@/lib/censor";
 import { isSupabaseConfigured } from "@/lib/config";
 import { finalizeModeration, preFilter } from "@/lib/moderation";
 import { isMember, maybeGrantInvite } from "@/lib/invites";
@@ -9,8 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Post } from "@/lib/types";
 import { createPostSchema } from "@/lib/validation";
 
-// max 5 posts per user per minute
-const POST_MAX = 5;
+const POST_MAX    = 5;
 const POST_WINDOW = 60;
 
 export async function POST(request: Request) {
@@ -27,21 +27,21 @@ export async function POST(request: Request) {
 
   const parsed = createPostSchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { campus, body, category } = parsed.data;
+
+  const { campus, category } = parsed.data;
+  const body = censorNames(parsed.data.body);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();
 
-  // Banned on this campus?
+  // Ban check
   const { data: ban } = await admin
     .from("bans")
     .select("until")
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You are banned from this campus" }, { status: 403 });
   }
 
-  // Must be a verified member (invite redeemed).
+  // Membership check
   const member = await isMember(user.id);
   if (!member) {
     return NextResponse.json(
@@ -61,7 +61,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Fetch custom tag if member has one (e.g. ANONxGODx000 for admin).
+  // Rate limit
+  const allowed = await withinRateLimit(admin, "posts", "user_id", user.id, POST_MAX, POST_WINDOW);
+  if (!allowed) {
+    return NextResponse.json({ error: "You're posting too fast. Try again shortly." }, { status: 429 });
+  }
+
+  // Pre-filter (cheap, no model)
+  if ((await preFilter(body)) === "reject") {
+    return NextResponse.json({ rejected: true, reason: "Blocked by the content filter." }, { status: 422 });
+  }
+
+  // Resolve anon tag (custom or HMAC)
   const { data: memberRow } = await admin
     .from("members")
     .select("custom_tag")
@@ -69,49 +80,48 @@ export async function POST(request: Request) {
     .maybeSingle();
   const customTag = memberRow?.custom_tag ?? null;
 
-  // Rate limit.
-  const allowed = await withinRateLimit(admin, "posts", "user_id", user.id, POST_MAX, POST_WINDOW);
-  if (!allowed) {
-    return NextResponse.json({ error: "You're posting too fast. Try again shortly." }, { status: 429 });
-  }
-
-  // Cheap deterministic gate before anything hits the model.
-  if ((await preFilter(body)) === "reject") {
-    return NextResponse.json({ rejected: true, reason: "Blocked by the content filter." }, { status: 422 });
-  }
-
-  // Insert as pending; RLS only allows pending inserts, so this never skips moderation.
-  const { data, error } = await supabase
+  // Insert as pending — RLS only allows pending inserts
+  const { data, error: insertError } = await supabase
     .from("posts")
     .insert({
       campus_slug: campus,
-      user_id: user.id,
+      user_id:     user.id,
       body,
-      anon_tag: resolveTag(user.id, campus, customTag),
+      anon_tag:    resolveTag(user.id, campus, customTag),
       category,
-      status: "pending",
+      status:      "pending",
     })
-    .select()
+    .select("id, campus_slug, body, anon_tag, category, status, created_at")
     .single();
 
-  if (error || !data) {
-    return NextResponse.json({ error: "Insert failed" }, { status: 500 });
+  if (insertError || !data) {
+    console.error("[posts] insert error:", insertError);
+    return NextResponse.json({ error: "Insert failed", detail: insertError?.message }, { status: 500 });
   }
 
-  // Classify after the response is sent, then flip status.
+  // Async: classify post, then flip status; also check invite credit grant
   after(() => finalizeModeration(data.id, body));
-  after(() => maybeGrantInvite(user.id, (data as { post_count?: number }).post_count ?? 0));
+  after(async () => {
+    // Re-query post_count since insert doesn't return it
+    const { data: m } = await admin
+      .from("members")
+      .select("post_count")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (m) await maybeGrantInvite(user.id, m.post_count ?? 0);
+  });
 
   const post: Post = {
-    id: data.id,
+    id:          data.id,
     campus_slug: data.campus_slug,
-    body: data.body,
-    anon_tag: data.anon_tag,
-    category: data.category,
-    status: data.status,
-    created_at: data.created_at,
-    reactions: { fire: 0, skull: 0, laugh: 0, hundred: 0 },
+    body:        data.body,
+    anon_tag:    data.anon_tag,
+    category:    data.category,
+    status:      data.status,
+    created_at:  data.created_at,
+    reactions:   { fire: 0, skull: 0, laugh: 0, hundred: 0 },
   };
 
   return NextResponse.json({ post });
 }
+"// v1.0"  
