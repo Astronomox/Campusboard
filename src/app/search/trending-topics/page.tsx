@@ -98,3 +98,4 @@ export default async function TrendingTopicsPage() {
     </>
   );
 }
+"// v1.0"  
