@@ -253,4 +253,3 @@ create policy "read own notifications"
   using (user_id = auth.uid());
 grant all on notifications to authenticated;
 create index if not exists notif_user_idx on notifications(user_id, created_at desc);
-"// v1.0"  

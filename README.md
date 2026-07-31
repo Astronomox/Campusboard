@@ -249,4 +249,3 @@ Currently hardcoded to UNILAG only. Multi-campus support is M7.
 ## License
 
 All rights reserved. This is a proprietary student project.
-"updated"  

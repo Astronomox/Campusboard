@@ -50,4 +50,3 @@ export async function POST(request: Request) {
   void notifyReaction(post_id, emoji, user.email ?? "anon");
   return NextResponse.json({ ok: true, state: "added" });
 }
-"// v1.0"  

@@ -58,4 +58,3 @@ export function CampusCrest({ slug, size = 38 }: { slug: string; size?: number }
     </svg>
   );
 }
-"// v1.0"  

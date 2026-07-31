@@ -28,4 +28,3 @@ export default function AccountSettingsPage() {
     </>
   );
 }
-"// v1.0"  

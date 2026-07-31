@@ -23,4 +23,3 @@ export default function WelcomePage() {
     </>
   );
 }
-"// v1.0"  

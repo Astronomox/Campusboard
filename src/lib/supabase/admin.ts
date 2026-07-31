@@ -11,4 +11,3 @@ export function createAdminClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-"// v1.0"  

@@ -56,4 +56,3 @@ export default function Error({
     </>
   );
 }
-"// v1.0"  

@@ -16,4 +16,3 @@ export default function PostSuccessPage() {
     </>
   );
 }
-"// v1.0"  

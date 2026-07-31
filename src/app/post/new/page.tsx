@@ -75,4 +75,3 @@ export default function NewPostPage() {
     </>
   );
 }
-"// v1.0"  

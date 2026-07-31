@@ -34,4 +34,3 @@ export async function GET() {
   const { data } = await supabase.from("bookmarks").select("post_id").eq("user_id", user.id);
   return NextResponse.json({ post_ids: (data ?? []).map((r: { post_id: string }) => r.post_id) });
 }
-"// v1.0"  

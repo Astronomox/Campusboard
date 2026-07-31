@@ -47,6 +47,7 @@ export function censorNames(text: string): string {
 }
 
 /** Not used for names anymore — returns 0 always. */
-export function countNamePatterns(_text: string): number {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function countNamePatterns(_text?: string): number {
   return 0;
 }

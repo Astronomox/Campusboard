@@ -48,4 +48,3 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ posts, nextCursor });
 }
-"// v1.0"  

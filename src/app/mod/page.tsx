@@ -49,4 +49,3 @@ export default async function ModDashboard() {
     </AdminShell>
   );
 }
-"// v1.0"  

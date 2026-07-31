@@ -26,4 +26,3 @@ export function RetroDots({ symbols = false }: { symbols?: boolean }) {
     </span>
   );
 }
-"// v1.0"  

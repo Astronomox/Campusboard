@@ -264,4 +264,3 @@ export function InviteManager() {
     </div>
   );
 }
-"// v1.0"  

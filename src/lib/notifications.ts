@@ -50,4 +50,3 @@ export async function notifyBan(
     until: until ?? "permanent",
   });
 }
-"// v1.0"  

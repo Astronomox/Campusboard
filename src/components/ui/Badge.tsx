@@ -19,4 +19,3 @@ export function StatusBadge({ status }: { status: string }) {
     <span className="sticker" style={{ background: colors[status] ?? "#eee" }}>{status}</span>
   );
 }
-"// v1.0"  

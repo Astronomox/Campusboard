@@ -12,4 +12,3 @@ export async function POST() {
   await admin.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
   return NextResponse.json({ ok: true });
 }
-"// v1.0"  

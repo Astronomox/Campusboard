@@ -101,4 +101,3 @@ export async function spendInviteCredit(
 
   return code;
 }
-"// v1.0"  

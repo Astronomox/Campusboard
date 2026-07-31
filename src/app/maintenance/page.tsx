@@ -7,4 +7,3 @@ export default function MaintenancePage() {
     </main>
   );
 }
-"// v1.0"  

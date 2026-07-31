@@ -63,4 +63,3 @@ export default function GlobalError({
     </html>
   );
 }
-"// v1.0"  

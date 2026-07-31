@@ -50,4 +50,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ codes: codes.map((c) => c.code) });
 }
-"// v1.0"  

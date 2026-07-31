@@ -16,4 +16,3 @@ export async function GET(request: Request) {
   }
   return NextResponse.redirect(data.url);
 }
-"// v1.0"  

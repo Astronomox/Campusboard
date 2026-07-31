@@ -30,4 +30,3 @@ export default function FAQPage() {
     </>
   );
 }
-"// v1.0"  

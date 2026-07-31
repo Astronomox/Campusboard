@@ -23,4 +23,3 @@ export async function createClient() {
     },
   });
 }
-"// v1.0"  

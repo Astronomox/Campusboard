@@ -22,4 +22,3 @@ export async function POST() {
 
   return NextResponse.json({ code });
 }
-"// v1.0"  

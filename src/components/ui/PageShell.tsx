@@ -27,4 +27,3 @@ export function PageShell({
     </div>
   );
 }
-"// v1.0"  

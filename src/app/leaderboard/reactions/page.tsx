@@ -38,4 +38,3 @@ export default async function TopReactedPage() {
     </>
   );
 }
-"// v1.0"  

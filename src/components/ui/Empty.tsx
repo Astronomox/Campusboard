@@ -7,4 +7,3 @@ export function Empty({ icon = "📭", title, body }: { icon?: string; title: st
     </div>
   );
 }
-"// v1.0"  

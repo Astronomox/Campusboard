@@ -138,4 +138,3 @@ function GoogleMark() {
     </svg>
   );
 }
-"// v1.0"  

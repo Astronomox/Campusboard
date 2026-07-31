@@ -55,4 +55,3 @@ const BASE: Omit<Post, "campus_slug">[] = [
 export function mockFeed(campusSlug: string): Post[] {
   return BASE.map((p) => ({ ...p, campus_slug: campusSlug }));
 }
-"// v1.0"  

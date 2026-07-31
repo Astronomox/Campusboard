@@ -32,4 +32,3 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     </>
   );
 }
-"// v1.0"  

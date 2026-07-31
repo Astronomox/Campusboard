@@ -29,4 +29,3 @@ export async function GET(request: Request) {
 
   return NextResponse.redirect(`${origin}/auth/error`);
 }
-"// v1.0"  

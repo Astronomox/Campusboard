@@ -37,4 +37,3 @@ export default function RulesPage() {
     </>
   );
 }
-"// v1.0"  

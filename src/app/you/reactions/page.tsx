@@ -83,4 +83,3 @@ export default async function YourReactionsPage() {
     </>
   );
 }
-"// v1.0"  

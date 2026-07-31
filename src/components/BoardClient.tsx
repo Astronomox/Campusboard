@@ -6,6 +6,7 @@ import { censorNames } from "@/lib/censor";
 import { anonTag } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
 import type { Campus, Category, Post, ReactionEmoji } from "@/lib/types";
+import { AdminCard } from "./AdminCard";
 import { Backdrop } from "./Backdrop";
 import { BottomNav, type Tab } from "./BottomNav";
 import { CampusCrest } from "./CampusCrest";
@@ -41,6 +42,7 @@ export function BoardClient({
   const [reactions, setReactions]       = useState<Record<string, ReactionEmoji | null>>({});
   const [reportTarget,  setReportTarget]  = useState<string | null>(null);
   const [bookmarks,      setBookmarks]      = useState<Set<string>>(new Set());
+  const [isAdminUser,    setIsAdminUser]    = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [toast, setToast]               = useState<string | null>(null);
 
@@ -50,6 +52,23 @@ export function BoardClient({
   const pendingRef   = useRef(pendingNew);
   const loadingOlder = useRef(false);
   const toastTimer   = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Detect admin user by checking their member record
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+    fetch("/api/invite/status")
+      .then((r) => r.json())
+      .then((d: { member: boolean; invitesLeft: number }) => {
+        if (d.member) {
+          // Check custom tag via the You screen's profile fetch
+          fetch("/api/mod/is-admin")
+            .then((r) => r.json())
+            .then((a: { admin: boolean }) => setIsAdminUser(a.admin))
+            .catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+  }, [supabaseConfigured]);
 
   useEffect(() => { postsRef.current  = posts;      }, [posts]);
   useEffect(() => { pendingRef.current = pendingNew; }, [pendingNew]);
@@ -237,6 +256,22 @@ export function BoardClient({
     [bookmarks, supabaseConfigured, showToast]
   );
 
+  const handleDelete = useCallback(
+    (postId: string) => {
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      showToast("Post deleted");
+    },
+    [showToast]
+  );
+
+  const handleEditSave = useCallback(
+    (postId: string, body: string) => {
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, body, status: "pending" } : p));
+      showToast("Post updated. Going through moderation again.");
+    },
+    [showToast]
+  );
+
   const handleReport = useCallback(
     async (reason: string) => {
       if (!reportTarget) return;
@@ -339,14 +374,28 @@ export function BoardClient({
                   className="feed-slide"
                   style={{ transform: `translateY(${(i - bounded) * 100}%)` }}
                 >
-                  <PostCard
-                    post={post}
-                    userReaction={reactions[post.id] ?? null}
-                    onReact={handleReact}
-                    onReport={setReportTarget}
-                    onBookmark={handleBookmark}
-                    bookmarked={bookmarks.has(post.id)}
-                  />
+                  {isAdminUser ? (
+                    <AdminCard
+                      post={post}
+                      userReaction={reactions[post.id] ?? null}
+                      onReact={handleReact}
+                      onReport={setReportTarget}
+                      onBookmark={handleBookmark}
+                      onDelete={handleDelete}
+                      onEditSave={handleEditSave}
+                      bookmarked={bookmarks.has(post.id)}
+                      isAdmin={true}
+                    />
+                  ) : (
+                    <PostCard
+                      post={post}
+                      userReaction={reactions[post.id] ?? null}
+                      onReact={handleReact}
+                      onReport={setReportTarget}
+                      onBookmark={handleBookmark}
+                      bookmarked={bookmarks.has(post.id)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -657,4 +706,3 @@ function GoogleMark() {
     </svg>
   );
 }
-"// v1.0"  

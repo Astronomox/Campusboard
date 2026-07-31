@@ -34,4 +34,3 @@ export default function SetupPage() {
     </>
   );
 }
-"// v1.0"  

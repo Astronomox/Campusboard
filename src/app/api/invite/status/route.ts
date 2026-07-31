@@ -24,4 +24,3 @@ export async function GET() {
     invitesLeft: data?.invites_left ?? 0,
   });
 }
-"// v1.0"  

@@ -65,4 +65,3 @@ export function BottomNav({
     </nav>
   );
 }
-"// v1.0"  

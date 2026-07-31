@@ -70,4 +70,3 @@ export default function PrivacySettingsPage() {
     </>
   );
 }
-"// v1.0"  

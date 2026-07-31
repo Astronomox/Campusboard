@@ -45,4 +45,3 @@ export default async function YourPostsPage() {
     </>
   );
 }
-"// v1.0"  

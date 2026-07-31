@@ -17,4 +17,3 @@ export default function BannedPage() {
     </>
   );
 }
-"// v1.0"  
