@@ -29,3 +29,4 @@ export const CATEGORY_META: Record<Category, { label: string; color: string }> =
 };
 
 export const CATEGORY_LIST = Object.keys(CATEGORY_META) as Category[];
+"// v1.0"  
