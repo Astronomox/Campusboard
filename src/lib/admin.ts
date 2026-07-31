@@ -7,3 +7,4 @@ export function isAdmin(email: string | null | undefined): boolean {
     .filter(Boolean);
   return list.includes(email.toLowerCase());
 }
+"// v1.0"  
