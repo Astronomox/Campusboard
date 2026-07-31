@@ -19,3 +19,4 @@ export function resolveTag(userId: string, campusSlug: string, customTag?: strin
 export function anonTag(): string {
   return `Anon #${Math.floor(Math.random() * 0xffff).toString(16).toUpperCase().padStart(4, "0")}`;
 }
+"// v1.0"  
