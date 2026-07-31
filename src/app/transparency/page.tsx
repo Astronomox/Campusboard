@@ -43,3 +43,4 @@ export default async function TransparencyPage() {
     </>
   );
 }
+"// v1.0"  
