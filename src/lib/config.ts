@@ -15,3 +15,4 @@ export function anonTag(): string {
     .padStart(4, "0");
   return `Anon #${hex}`;
 }
+"// v1.0"  
