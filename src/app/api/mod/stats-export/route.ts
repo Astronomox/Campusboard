@@ -26,3 +26,4 @@ export async function GET() {
   ].join("\n");
   return new NextResponse(csv, { headers: { "Content-Type": "text/csv", "Content-Disposition": 'attachment; filename="stats.csv"' } });
 }
+"// v1.0"  
