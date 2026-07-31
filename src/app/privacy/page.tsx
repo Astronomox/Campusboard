@@ -27,3 +27,4 @@ export default function PrivacyPage() {
     </>
   );
 }
+"// v1.0"  
