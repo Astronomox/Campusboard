@@ -61,3 +61,4 @@ export function paramsToObject(sp: URLSearchParams): Record<string, string> {
   });
   return out;
 }
+"// v1.0"  
