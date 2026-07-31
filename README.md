@@ -1,148 +1,252 @@
 # CampusBoard
 
-Anonymous, moderated campus discussion. One post at a time. Pick your school, swipe through posts like stories, react, and drop your own take without a username attached. Every post passes through AI moderation before it hits the public feed.
+Anonymous, AI-moderated discussion board for UNILAG students. Invite-only. One post at a time.
 
-Built with Next.js 15, TypeScript, Tailwind 4, Supabase, and Gemini for moderation. Fonts (Fredoka, Poppins) load from Google Fonts via a stylesheet link in the root layout.
+## What it is
 
-## What is inside
+CampusBoard is a full-stack web app where UNILAG students post anonymously under stable cryptographic pseudonyms. Every post passes an AI moderation gate before reaching the public feed. Access is invite-only: a verified student gives you a code, you sign in with Google, enter the code, and you're in. The board is a swipeable one-post-at-a-time feed in a retro neo-brutalist UI.
 
-- Full screen swipeable feed (touch, scroll, keyboard: arrows or j / k)
-- Retro neo-brutalist UI: bright category-colored panels, thick ink borders, hard offset shadows, sticker tags, retro window dots, and a press-into-shadow interaction. Per campus chrome color, motto, and custom SVG crest
-- Full set of screens: swipeable Feed and Trending, a Search screen with keyword and category filters, and a You screen with anonymous identity plus Google sign in
-- Anonymous posting with rotating Anon tags, backed by real accounts so repeat abusers can be banned
-- AI moderation gate on every post (safe / borderline / reject) running on Gemini flash-lite in a Supabase edge function
-- Reactions with one vote per user per post
-- Edge cached public feed so 1000 readers hit the database roughly once every 10 seconds, not 1000 times
-- Live feed refresh: the board polls the cached feed, updates reaction counts in place, and surfaces new posts behind a tap-to-reveal pill
-- Stable per-user anonymous tags (HMAC of user plus campus) so repeat posters are recognizable and bannable, backed by a `bans` table checked on every post
-- Zod validation on every API route, and a database-backed search endpoint with keyword, category filter, and cursor pagination
-- Async moderation: a post inserts as pending, a deterministic pre-filter catches obvious junk, then Gemini classifies after the response and flips the status. RLS lets users insert only pending posts, so nothing reaches the public feed unmoderated
-- Report button on every post, per-user rate limits on posting and reporting, and a gated `/mod` review queue where admins approve, reject, or ban
-- Offline demo mode so the app runs with zero backend
+## Architecture
 
-Custom crests are original geometric marks made for this app. They are not copies of any university's official seal.
+```
+Browser
+  ↓
+Next.js 15 (App Router, Server Components, Middleware)
+  ├─ Middleware: session refresh, route protection, maintenance mode
+  ├─ API routes: posts, reactions, reports, search, invites, moderation, admin
+  ├─ Server pages: feed (SSR), mod dashboard, leaderboard, notifications
+  └─ Client components: swipeable feed, compose sheet, invite gate
+  ↓
+Supabase
+  ├─ Postgres: posts, reactions, reports, bans, invites, members,
+  │            bookmarks, notifications, wordlist, announcements
+  ├─ Auth: Google OAuth with session cookies via @supabase/ssr
+  ├─ RLS: row-level security on every table; users can only insert
+  │       pending posts (never set published directly)
+  └─ Edge Function: Gemini-powered post classifier (Deno)
+```
 
-## Quick start (demo mode, no backend)
+## Tech stack
+
+| Layer | Tool |
+|-------|------|
+| Framework | Next.js 15.5, React 19, TypeScript (strict) |
+| Styling | Tailwind CSS 4 (CSS-first), hand-written globals.css |
+| Database | Supabase Postgres with RLS |
+| Auth | Supabase Auth (Google OAuth) via @supabase/ssr |
+| AI moderation | Google Gemini gemini-3.5-flash-lite (Supabase Edge Function) |
+| Validation | Zod on every API route |
+| Fonts | Fredoka (display), Poppins (body) via Google Fonts |
+| Package manager | pnpm |
+
+## Features
+
+### Identity and access
+- Invite-only: every new user needs a valid 8-character code to join
+- Stable anonymous tags: HMAC(secret, user_id + campus) produces a deterministic Anon #XXXX that never changes for the same user on the same campus
+- Custom admin tags: admin can assign custom tags like ANONxGODx000 via /mod/members
+- Google OAuth sign-in with proper callback handling and ?next= redirect
+- Route protection via middleware: unauthenticated users are redirected to /auth/login
+- Post-OAuth member check: new users who haven't redeemed an invite land on /onboard
+
+### Content and moderation
+- Async moderation: posts insert as pending, pre-filter runs first (zero-cost regex), then Gemini classifies after the response is sent via next/server after()
+- Fail-safe: anything other than a clean "safe" verdict stays out of the public feed
+- Name censoring: real names are automatically masked before storage (Mr Victory becomes Mr V******, Adeola Ibrahim becomes A***** I******)
+- Deterministic pre-filter: admin-editable wordlist in the DB, fetched and cached at runtime
+- Prompt injection hardening: post body is wrapped in XML tags with explicit instructions to treat it as untrusted content
+- Report flow: flag button on every post, reason picker, rate-limited to 10 reports per 5 minutes
+- Moderation dashboard at /mod with approve/reject/ban actions
+
+### Feed
+- Swipeable one-post-at-a-time feed with touch, wheel, and keyboard (arrows/j/k) navigation
+- Live feed refresh: polls the cached feed endpoint every 15 seconds, updates reaction counts in place, surfaces new posts behind a tap-to-reveal pill
+- Infinite scroll: loads older posts automatically as you near the end
+- Trending sort: sorts by total reaction count
+- Four categories: Rant (red), Shoutout (green), Callout (yellow), Info (blue)
+- Four reactions: fire, skull, laugh, hundred
+
+### Security
+- RLS on every table: users can only read their own bans, bookmarks, notifications
+- Posts insert policy enforces status=pending: no client can skip moderation
+- Rate limiting: 5 posts per minute, 10 reports per 5 minutes (DB-backed sliding window)
+- Ban check on every post attempt
+- Membership check on every post attempt (invite must be redeemed)
+- Middleware blocks all protected routes for unauthenticated users
+- Maintenance mode: set MAINTENANCE=1 to redirect everything to /maintenance
+
+### Pages (84 files, 69 compiled routes)
+
+**Public:** Landing, about, how it works, rules, privacy (NDPR), terms, contact, FAQ, transparency report
+
+**Auth:** Login (two-panel design), Google OAuth redirect, callback with member check, error page
+
+**Onboarding:** Invite code entry, welcome, community rules acceptance, display setup, banned notice
+
+**Board:** Swipeable feed, trending, search with keyword/category/tag, post detail with permalink, share, report, reactions, compose with preview, success/rejected states
+
+**Profile:** Your posts, your reactions, saved posts (bookmarks), your invites with credit tracking and code generation, settings (display/notifications/privacy/account with delete)
+
+**Discovery:** Discover (editor-curated), leaderboard (by posts, by reactions, top givers), trending topics (keyword extraction from last 48h), all tags
+
+**Notifications:** Full notification feed with read/unread, reaction notifications, system notifications, mark-all-read on visit
+
+**Admin (/mod):** Dashboard with live counts, flagged queue, pending queue, open reports with detail view, active bans with lift action, new ban form, member list with detail view and custom tag setter, invite management with bulk generation, announcements with create, stats with CSV export, rejected posts audit log, flagged history, editable wordlist
+
+**Error/System:** 404, route-level error boundary, global error boundary, loading spinners, maintenance page
+
+**Future (placeholders):** Events, polls, confessions, housing, marketplace, clubs, threaded replies
+
+## Database schema
+
+```
+posts          — id, campus_slug, user_id, body, anon_tag, category, status, created_at
+reactions      — id, post_id, user_id, emoji, created_at (unique per user per post)
+reports        — id, post_id, reporter, reason, status, created_at (unique per user per post)
+bans           — user_id, campus_slug, until, reason, created_at (PK: user_id + campus_slug)
+members        — user_id (PK), campus_slug, invite_code, post_count, invites_left, custom_tag, joined_at
+invites        — code (PK), created_by, redeemed_by, redeemed_at, created_at
+bookmarks      — user_id, post_id, saved_at (PK: user_id + post_id)
+notifications  — id, user_id, kind, payload (jsonb), read, created_at
+announcements  — id, body, created_by, active, created_at
+wordlist       — id, pattern, added_by, created_at
+posts_with_reactions — view that joins posts with aggregated reaction counts
+```
+
+RLS is enabled on every table. A trigger auto-increments members.post_count when a post is published.
+
+## Setup
+
+### Prerequisites
+- Node.js 18+
+- pnpm 8+ (install: `npm install -g pnpm`)
+- A Supabase project
+- A Google Cloud project with OAuth credentials
+- A Gemini API key
+
+### 1. Install
 
 ```bash
+git clone https://github.com/Astronomox/Campusboard.git
+cd Campusboard
 pnpm install
-pnpm dev
 ```
 
-Open http://localhost:3000. With no Supabase keys set, the feed loads from mock data and posting and reactions work locally in the browser. Good for trying the UI.
+### 2. Environment
 
-## Full setup (real backend)
+Copy `.env.example` to `.env.local` and fill in:
 
-### 1. Create a Supabase project
-
-Grab the project URL and the anon and service role keys from Project Settings, API.
-
-### 2. Create the schema
-
-Either push with the CLI:
-
-```bash
-supabase link --project-ref <your-ref>
-supabase db push
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+ANON_TAG_SECRET=any-long-random-string-set-once
+ADMIN_EMAILS=your@email.com
 ```
 
-Or open the SQL editor and paste the contents of `supabase/migrations/001_init.sql`.
+### 3. Database
 
-This creates the `posts` and `reactions` tables, the `posts_with_reactions` view, row level security policies, and grants.
+Run `supabase/migrations/001_init.sql` in your Supabase SQL editor. This creates all tables, views, RLS policies, triggers, and indexes.
 
-### 3. Turn on Google sign in
+### 4. Auth
 
-In Authentication, Providers, enable Google and add your client ID and secret. Then in URL Configuration add the redirect:
+In Supabase dashboard:
+1. Authentication > Providers > Google: enable, paste your Google client ID and secret
+2. Authentication > URL Configuration > Site URL: `http://localhost:3000`
+3. Authentication > URL Configuration > Redirect URLs: add `http://localhost:3000/auth/callback`
 
-```
-http://localhost:3000/auth/callback
-https://your-domain.com/auth/callback
-```
-
-### 4. Get a Gemini API key
-
-Free from Google AI Studio at https://aistudio.google.com. The moderation function uses `gemini-3.5-flash-lite`.
-
-### 5. Deploy the moderation function
+### 5. Edge function
 
 ```bash
 supabase functions deploy moderate-post
 supabase secrets set GEMINI_API_KEY=your-gemini-key
 ```
 
-The function returns `{ "verdict": "safe" | "borderline" | "reject", "reason": "..." }`. The app publishes safe posts, holds borderline posts as `flagged` for review, and rejects the rest. If the function is ever unreachable, posts are held as flagged rather than published unchecked, so nothing skips moderation.
-
-### 6. Set environment variables
-
-Copy `.env.example` to `.env.local` and fill in:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-GEMINI_API_KEY=your-gemini-key
-ANON_TAG_SECRET=any-long-random-string
-ADMIN_EMAILS=you@example.com
-```
-
-`GEMINI_API_KEY` in `.env.local` is only needed for local function testing. In production it lives as a Supabase function secret from step 5.
-
-### 7. Run it
+### 6. Run
 
 ```bash
 pnpm dev
 ```
 
-## Deploy to Vercel
+Open `http://localhost:3000`. You'll see the landing page.
 
-Push to GitHub, import the repo in Vercel, and add the four environment variables in Project Settings. The feed endpoint sets `s-maxage=10, stale-while-revalidate=5`, so Vercel's edge serves cached feed responses and shields the database under load.
+### 7. First admin setup
 
-## Environment variables
+1. Sign in at `/auth/login`
+2. In Supabase SQL editor, manually insert yourself as a member:
+   ```sql
+   INSERT INTO members (user_id, custom_tag)
+   SELECT id, 'ANONxGODx000' FROM auth.users WHERE email = 'your@email.com';
+   ```
+3. Go to `/mod` — you should see the admin dashboard
+4. Go to `/mod/invites` and generate your first batch of seed codes
+5. Distribute codes to your first UNILAG users
 
-| Variable | Where | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | client + server | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + server | Public anon key, guarded by RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | server only | Authorizes the call to the moderation function |
-| `GEMINI_API_KEY` | edge function secret | Gemini access for classification |
-| `ANON_TAG_SECRET` | server only | HMAC key for stable per-user anonymous tags |
-| `ADMIN_EMAILS` | server only | Comma-separated emails allowed into the `/mod` dashboard |
+## Deployment
 
-Leave the two `NEXT_PUBLIC_` values unset to stay in demo mode.
+### Vercel (recommended)
 
-## How it scales
+1. Import the GitHub repo at vercel.com
+2. Set all env vars from `.env.example`
+3. Deploy
+4. Update Supabase URL Configuration:
+   - Site URL: `https://your-app.vercel.app`
+   - Redirect URLs: add `https://your-app.vercel.app/auth/callback`
 
-The read path and write path are split. Reads go through `/api/feed`, an anonymous no cookie query wrapped in an edge cache. One query rebuilds the feed every 10 seconds per campus and every reader gets the cached copy. Writes (posts, reactions) go straight to Supabase and are always low volume next to reads. No Redis, no queue.
+### Cloudflare Workers (scaling path)
 
-## Scripts
+The roadmap includes moving to Cloudflare Workers via OpenNext for edge-cached feeds (KV), rate limiting (Durable Objects), and media storage (R2). See the scaling architecture section below.
 
-```bash
-pnpm dev        # local dev
-pnpm build      # production build
-pnpm start      # serve the build
-pnpm lint       # eslint
-pnpm typecheck  # tsc, no emit
-```
-
-## Project structure
+## Scaling architecture (planned)
 
 ```
-src/
-  app/
-    page.tsx                 campus picker
-    [campus]/page.tsx        board (server fetch, then client)
-    api/feed/route.ts        cached public feed
-    api/posts/route.ts       create post, moderation gate
-    api/react/route.ts       toggle reaction
-    auth/callback/route.ts   oauth code exchange
-  components/                UI, custom SVG icons, campus crests
-  lib/                       types, campus registry, supabase clients, config
-  middleware.ts              session refresh
-supabase/
-  migrations/001_init.sql    schema, RLS, view
-  functions/moderate-post/   Gemini classifier (Deno)
+Client -> Cloudflare Workers (Next.js via OpenNext)
+             ├─ Feed reads -> KV cache -> (miss) -> Postgres
+             ├─ Writes -> Durable Object (rate limit) -> Postgres
+             ├─ Moderation -> Queue -> Gemini -> Postgres
+             └─ Media (future) -> R2
 ```
+
+- KV-cached feeds: one DB query per campus per ~10s, all readers get the cached copy
+- Durable Object rate limiter: per-user token bucket, sharded per campus
+- Hyperdrive: connection pooling for Postgres from Workers
+- R2: zero-egress media storage when image posts are added
+
+## Roadmap
+
+### Shipped
+- **M1 — Functional core:** stable pseudonyms, validation, real search, live feed
+- **M2 — Trust and safety:** async moderation, reports, rate limiting, mod dashboard
+- **M3 — Invite-only access:** invite system, custom tags, full page build (84 pages)
+
+### Next
+- **M4 — Engagement:** threaded replies, push notifications, reply mentions
+- **M5 — Launch readiness:** analytics, error monitoring (Sentry), load testing, NDPR audit
+- **M6 — Pilot:** seed UNILAG, tune moderation on real traffic
+- **M7 — Scale:** Cloudflare edge layer, multi-campus expansion
+- **M8 — Verticals:** events, polls, confessions, housing, marketplace
+
+## Name censoring
+
+Posts are automatically scanned for real names before storage. The censor runs synchronously with zero external calls:
+
+- Title + name: `Mr Victory` → `Mr V******`, `Prof Adeyemi` → `Prof A******`
+- Firstname Lastname: `Adeola Ibrahim` → `A***** I******`
+- Nigerian titles: Alhaji, Chief, Engr, Barr, Hon, Pastor, etc.
+- False positive protection: common words like University, Lagos, Monday, WhatsApp are not censored
+
+The AI moderation layer catches what the regex misses contextually. The censor is defense in depth, not the only barrier.
 
 ## Adding a campus
 
-Add an entry to `CAMPUSES` in `src/lib/campuses.ts` with a slug, name, motto, and an `accent` color, then add a matching crest branch in `src/components/CampusCrest.tsx`. That is the whole change. The route, theming, and feed pick it up automatically. Post colors come from the category, not the campus.
+1. Add an entry to `CAMPUSES` in `src/lib/campuses.ts` with a slug, name, motto, and accent color
+2. Add a matching crest branch in `src/components/CampusCrest.tsx`
+3. The route, theming, and feed pick it up automatically
+4. Post colors come from the category, not the campus
+
+Currently hardcoded to UNILAG only. Multi-campus support is M7.
+
+## License
+
+All rights reserved. This is a proprietary student project.
+"updated"  
