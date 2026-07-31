@@ -32,3 +32,4 @@ export interface ModerationResult {
   verdict: ModerationVerdict;
   reason: string;
 }
+"// v1.0"  
