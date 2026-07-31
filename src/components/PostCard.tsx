@@ -92,3 +92,4 @@ export function PostCard({
     </article>
   );
 }
+"// v1.0"  
