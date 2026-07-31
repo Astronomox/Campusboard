@@ -20,3 +20,4 @@ export async function POST(request: Request) {
   await admin.from("announcements").insert({ body: parsed.data.body, created_by: user.id });
   return NextResponse.json({ ok: true });
 }
+"// v1.0"  
